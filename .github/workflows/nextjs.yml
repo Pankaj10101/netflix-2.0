@@ -25,7 +25,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
- NEXT_PUBLIC_API_KEY : 9e1bdc38bebebf5443dd26ba363f5e24
+  NEXT_PUBLIC_API_KEY: 9e1bdc38bebebf5443dd26ba363f5e24
 
 jobs:
   # Build job
@@ -58,11 +58,11 @@ jobs:
           cache: ${{ steps.detect-package-manager.outputs.manager }}
       - name: Setup Pages
         uses: actions/configure-pages@v3
-        with:
           # Automatically inject basePath in your Next.js configuration file and disable
           # server side image optimization (https://nextjs.org/docs/api-reference/next/image#unoptimized).
           #
           # You may remove this line if you want to manage the configuration yourself.
+        with:
           static_site_generator: next
       - name: Restore cache
         uses: actions/cache@v3
@@ -81,8 +81,9 @@ jobs:
       - name: Static HTML export with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next export
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
+          name: pages
           path: ./out
 
   # Deployment job
@@ -94,5 +95,23 @@ jobs:
     needs: build
     steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+      - name: Copy artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: pages
+          path: ./pages
+      - name: Commit and push changes
+        run: |
+          cd ./pages
+          git init
+          git add .
+          git commit -m "Deploy to GitHub Pages"
+          git push --force "https://${{ github.token }}@github.com/${{ github.repository }}.git" master:gh-pages
